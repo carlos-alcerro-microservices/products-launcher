@@ -17,64 +17,98 @@ services:
       - PORT=3000
       - NATS_SERVERS=nats://nats-server:4222
 
-  products_ms:
-    build: ./products-micros
-    volumes:
-      - ./products-micros/src:/usr/src/app/src
-    command: npm run start:dev
-    environment:
-      - PORT=3001
-      - NATS_SERVERS=nats://nats-server:4222
-      - DATABASE_URL=file:./dev.db
-
-  orders-ms:
-    build: ./orders-ms
+  auth-ms:
+    build: ./auth-ms
     depends_on:
-      orders-db:
+      auth-db:
         condition: service_healthy
       nats-server:
         condition: service_started
     volumes:
-      - ./orders-ms/src:/usr/src/app/src
+      - ./auth-ms/src:/usr/src/app/src
     command: npm run start:dev
     environment:
-      PORT: 3002
+      PORT: 3004
       NATS_SERVERS: nats://nats-server:4222
-      DATABASE_URL: postgresql://postgres:123456@orders-db:5432/ordersdb?schema=public
+      DATABASE_URL: postgresql://postgres:1234567@auth-db:5432/authdb?schema=public
+      JWT_SECRET: ${JWT_SECRET}
 
-  orders-db:
-    container_name: orders_database
+  auth-db:
+    container_name: auth_database
     image: postgres:14.3
     restart: always
     volumes:
-      - ./orders-ms/postgres:/var/lib/postgresql/data
+      - ./auth-ms/postgres:/var/lib/postgresql/data
     ports:
       - "5436:5432"
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: "123456"
-      POSTGRES_DB: ordersdb
+      POSTGRES_PASSWORD: "1234567"
+      POSTGRES_DB: authdb
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d ordersdb"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d authdb"]
       interval: 5s
       timeout: 5s
       retries: 10
       start_period: 10s
 
-  #PAYMENTS MICROSERVICE
+      # products_ms:
+      #  build: ./products-micros
+      # volumes:
+      #- ./products-micros/src:/usr/src/app/src
+    #command: npm run start:dev
+    #environment:
+    # - PORT=3001
+    #- NATS_SERVERS=nats://nats-server:4222
+    #- DATABASE_URL=file:./dev.db
 
-  payments-ms:
-    container_name: payments-ms
-    build: ./payments-ms
-    ports:
-      - "${PAYMENTS_MS_PORT:-3003}:${PAYMENTS_MS_PORT:-3003}"
-    volumes:
-      - ./payments-ms/src:/usr/src/app/src
-    command: npm run start:dev
-    environment:
-      PORT: ${PAYMENTS_MS_PORT:-3003}
-      NATS_SERVERS: nats://nats-server:4222
-      STRIPE_SECRET: ${STRIPE_SECRET}
-      SUCCES_URL: ${SUCCES_URL}
-      CANCEL_URL: ${CANCEL_URL}
-      ENDPOINT_SECRET: ${ENDPOINT_SECRET}
+    # orders-ms:
+  #   build: ./orders-ms
+  #   depends_on:
+  #     orders-db:
+  #       condition: service_healthy
+  #     nats-server:
+  #       condition: service_started
+  #   volumes:
+  #     - ./orders-ms/src:/usr/src/app/src
+  #   command: npm run start:dev
+  #   environment:
+  #     PORT: 3002
+  #     NATS_SERVERS: nats://nats-server:4222
+  #     DATABASE_URL: postgresql://postgres:123456@orders-db:5432/ordersdb?schema=public
+
+  # orders-db:
+  #   container_name: orders_database
+  #   image: postgres:14.3
+  #   restart: always
+  #   volumes:
+  #     - ./orders-ms/postgres:/var/lib/postgresql/data
+  #   ports:
+  #     - "5436:5432"
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: "123456"
+  #     POSTGRES_DB: ordersdb
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U postgres -d ordersdb"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 10
+  #     start_period: 10s
+
+  # # PAYMENTS MICROSERVICE
+  # payments-ms:
+  #   container_name: payments-ms
+  #   build: ./payments-ms
+  #   ports:
+  #     - "${PAYMENTS_MS_PORT:-3003}:${PAYMENTS_MS_PORT:-3003}"
+  #   volumes:
+  #     - ./payments-ms/src:/usr/src/app/src
+  #   command: npm run start:dev
+  #   environment:
+  #     PORT: ${PAYMENTS_MS_PORT:-3003}
+  #     NATS_SERVERS: nats://nats-server:4222
+  #     STRIPE_SECRET: ${STRIPE_SECRET}
+  #     SUCCES_URL: ${SUCCES_URL}
+  #     CANCEL_URL: ${CANCEL_URL}
+  #     ENDPOINT_SECRET: ${ENDPOINT_SECRET}
